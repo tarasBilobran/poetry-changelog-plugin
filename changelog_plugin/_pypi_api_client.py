@@ -9,6 +9,6 @@ class PyPIAPIClient:
         self,
         pkg_name: str
     ) -> dict:
-        response = self.client.get(f"/pypi/{pkg_name}/json").json()
+        response = self.client.get(f"/pypi/{pkg_name}/json")
         response.raise_for_status()
         return response.json()

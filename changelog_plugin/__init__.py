@@ -20,35 +20,38 @@ class ShowChangelogCommand(Command):
         self._github_api_client = GitHubAPIClient()
         self._pypi_api_client = PyPIAPIClient()
 
+    @property
     def handle(self) -> int:
         if not self.poetry.locker.is_locked():
-            self.line_error(
-                "<error>Error: poetry.lock not found. Run `poetry lock` to create"
-                " it.</error>"
-            )
+            self.line_error("Error: poetry.lock not found. Run `poetry lock` to create it.")
             return 1
 
         package_name = self.argument("package")
 
         locked_repo = self.poetry.locker.locked_repository()
 
-        pkg = None
-        for locked in locked_repo.packages:
-            if locked.name == package_name:
-                pkg = locked
-                break
+        # TODO: Search accross locked versions to find current version.
+        # pkg = None
+        # for locked in locked_repo.packages:
+        #     if locked.name == package_name:
+        #         pkg = locked
+        #         break
 
-        print(pkg)
-        print(self.poetry)
-        print(package_name)
-
-        # package = "poetry"
-        self.info(f"Looking for a changelog for package '{package_name}'. "
-                  f"Between versions 1.8.4 and 1.8.2")
+        self.info(f"Looking for a changelog for package '{package_name}'.")
 
         details = self._pypi_api_client.get_package_details(package_name)
         # Example 'https://github.com/python-poetry/poetry'
-        github_url = details["info"]["project_urls"]["Repository"]
+
+        project_urls = details["info"]["project_urls"]
+
+        if _url := project_urls.get("Repository"):
+            github_url = _url
+        elif _url := project_urls.get("Source"):
+            github_url = _url
+        else:
+            # TODO: Dedicated error
+            raise RuntimeError
+
         *_, organization, repository = github_url.split("/")
 
         releases = self._github_api_client.get_releases(organization, repository)
